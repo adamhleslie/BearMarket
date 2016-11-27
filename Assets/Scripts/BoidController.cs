@@ -39,7 +39,7 @@ public class BoidController : MonoBehaviour
     boidList[id] = body.position;
 
     // Step 2: Generate a container of acceleration vectors
-    //ICollection<Vector3> accelerations = new Collection<Vector3>();
+    List<Vector3> accelerations = new List<Vector3>();
     Vector3 singleAcc = new Vector3();
     foreach(KeyValuePair<int, Vector3> entry in boidList)
     {
@@ -51,7 +51,7 @@ public class BoidController : MonoBehaviour
           singleAcc.z = singleAcc.z * maxMagnitude;
           singleAcc.y = singleAcc.y * maxMagnitude;
           singleAcc.x = singleAcc.x * maxMagnitude;
-          //accelerations.Add(singleAcc);
+          accelerations.Add(singleAcc);
         }
         // If far, move closer
         else if (dist > 4) {
@@ -59,14 +59,13 @@ public class BoidController : MonoBehaviour
           singleAcc.z = singleAcc.z * maxMagnitude;
           singleAcc.y = singleAcc.y * maxMagnitude;
           singleAcc.x = singleAcc.x * maxMagnitude;
-          //accelerations.Add(singleAcc);
+          accelerations.Add(singleAcc);
         }
       }
     }
 
     // Step 3: Accumulate acceleration vectors
-    //Vector3 output = AccumulateAccelerations(accelerations);
-    Vector3 output = Vector3.down;
+    Vector3 output = AccumulateAccelerations(accelerations);
 
     // Step 4: Apply acceleration vectors to boid
     body.AddForce(output);
