@@ -12,25 +12,23 @@ public class BoidController : MonoBehaviour
 	private Vector3 initialVelocity;
 
 	[SerializeField]
-	private float maxForceMagnitude;
+	private float forceAccumulationMax;
 
 	[SerializeField]
-	private float repulsionRadius;
+	private float avoidanceRadius;
 
 	[SerializeField]
-	private float repulsionScale;
+	private float avoidanceStrength;
 
 	[SerializeField]
-	private float attractionRadius;
+	private float centeringRadius;
 
 	[SerializeField]
-	private float attractionScale;
+	private float centeringStrength;
 
 	// Need to store local awareness of
 	// 1. Boids
-	private static Dictionary<int, Vector3> boidList = null;
-	private int id;
-	private static int nextId = 0;
+	private static List<Rigidbody> boidList = null;
 	// 2. Obstacles
 	// 3. Predators
 	private Vector3 predLoc;
@@ -44,57 +42,65 @@ public class BoidController : MonoBehaviour
 		// Initialize the boidList and square radius's if needed
 		if (boidList == null)
 		{
-			boidList = new Dictionary<int, Vector3>();
-			repulsionRadius = repulsionRadius * repulsionRadius;
-			attractionRadius = attractionRadius * attractionRadius;
+			boidList = new List<Rigidbody>();
+			avoidanceRadius = avoidanceRadius * avoidanceRadius;
+			centeringRadius = centeringRadius * centeringRadius;
+			Debug.Log("Sqr Avoidance radius = " + avoidanceRadius);
+			Debug.Log("Sqr Centering radius = " + centeringRadius);
 		}
 
-		// Generate id for this boid
-		id = nextId;
-		nextId++;
-
 		// Add to boidList
-		boidList.Add(id, body.position);
+		boidList.Add(body);
 	}
 
 	void FixedUpdate ()
 	{
-		// Step 1: Update spatial awareness
-		boidList[id] = body.position;
+		// Step 1: Update spatial awareness (Automatically)
 
-		// Step 2: Generate a container of acceleration vectors
-		List<Vector3> repulsions = new List<Vector3>();
-		List<Vector3> attractions = new List<Vector3>();
-		List<Vector3> velocityMatching = new List<Vector3>();
-		foreach (KeyValuePair<int, Vector3> entry in boidList)
+		// Step 2: Generate acceleration vectors
+		List<Vector3> avoidance = new List<Vector3>();
+		bool flockFound = false;
+		Vector3 flockPositionMin = new Vector3();
+		Vector3 flockPositionMax = new Vector3();
+
+		foreach (Rigidbody boid in boidList)
 		{
-			if (entry.Key != id) 
+			if (boid != body) 
 			{
-				Vector3 displacement = entry.Value - body.position;
+				Vector3 displacement = boid.position - body.position;
 				float sqrDist = displacement.sqrMagnitude;
-				if (sqrDist < repulsionRadius) 
+				if (sqrDist < avoidanceRadius) 
 				{
 					// If close, move away
-					// add to list of repulsions
-					repulsions.Add(displacement.normalized * (-1) * (repulsionScale / sqrDist));
+					avoidance.Add(displacement.normalized * (-1) * (avoidanceStrength / sqrDist));
 				}
-				else if (sqrDist < attractionRadius) 
+				if (sqrDist < centeringRadius) 
 				{
-					// If far, move closer
-					// add to list of attractions
-					attractions.Add(displacement.normalized * (attractionScale / sqrDist));
-
-					// attempt to match velocity of other boid
-					velocityMatching.Add()
+					// Update awareness of flock
+					if (!flockFound)
+					{
+						flockPositionMin = boid.position;
+						flockPositionMax = boid.position;
+						flockFound = true;
+					}
+					else
+					{
+						flockPositionMin = Vector3.Min(flockPositionMin, boid.position);
+						flockPositionMax = Vector3.Max(flockPositionMax, boid.position);
+					}
 				}
 			}
 		}
 
+		List<Vector3> accelerations = new List<Vector3>();
+		accelerations.AddRange(avoidance);
+
+		Vector3 flockCenter = new Vector3((flockPositionMin.x + flockPositionMax.x) / 2, 0, (flockPositionMin.z + flockPositionMax.z) / 2);
+		if (flockFound)
+			accelerations.Add((flockCenter - body.position).normalized * centeringStrength);
+
 		// Step 3: Accumulate acceleration vectors
 		// sum each list into its own combined vector representing different forces acting on the boid, adding each to the list of vectors to be accumulated
-		List<Vector3> accelerations = new List<Vector3>();
-		accelerations.AddRange(repulsions);
-		accelerations.AddRange(attractions);
 		Vector3 output = AccumulateAccelerations(accelerations);
 
 		// Step 4: Apply acceleration vectors to boid
@@ -111,10 +117,10 @@ public class BoidController : MonoBehaviour
 		foreach (Vector3 acc in accelerations)
 		{
 			totalMagnitude += acc.magnitude;
-			if (totalMagnitude >= maxForceMagnitude)
+			if (totalMagnitude >= forceAccumulationMax)
 			{
 				// Scale the acceleration down when its entire magnitude not used
-				float scale = 1 - ((totalMagnitude - maxForceMagnitude) / acc.magnitude);
+				float scale = 1 - ((totalMagnitude - forceAccumulationMax) / acc.magnitude);
 				result += scale * acc;
 				break;
 			}
