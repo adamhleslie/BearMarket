@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 public class BoidController : MonoBehaviour
 {
@@ -10,10 +9,16 @@ public class BoidController : MonoBehaviour
   // instantaneous force max
 
   [SerializeField]
-    private Vector3 initialVelocity;
+    private Vector3 initialVelocityMin;
+
+  [SerializeField]
+    private Vector3 initialVelocityMax;
 
   [SerializeField]
     private float forceAccumulationMax;
+
+  [SerializeField]
+    private float visionRadius;
 
   [SerializeField]
     private float avoidanceRadius;
@@ -22,32 +27,38 @@ public class BoidController : MonoBehaviour
     private float avoidanceStrength;
 
   [SerializeField]
-    private float centeringRadius;
+    private float centeringStrength;
 
   [SerializeField]
-    private float centeringStrength;
+    private float timeToMatchVelocity;
+
+  [SerializeField]
+    private float maxVelocity;
+  [SerializeField]
+    private float minVelocity;
 
   // Need to store local awareness of
   // 1. Boids
   private static List<Rigidbody> boidList = null;
   // 2. Obstacles
   // 3. Predators
-  private Vector3 predLoc;
 
   // Initialization
   void Start ()
   {
     body = GetComponent<Rigidbody>();
-    body.velocity = initialVelocity;
+    body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
+        Random.Range(initialVelocityMin.y, initialVelocityMax.y),
+        Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
     // Initialize the boidList and square radius's if needed
     if (boidList == null)
     {
       boidList = new List<Rigidbody>();
       avoidanceRadius = avoidanceRadius * avoidanceRadius;
-      centeringRadius = centeringRadius * centeringRadius;
+      visionRadius = visionRadius * visionRadius;
       Debug.Log("Sqr Avoidance radius = " + avoidanceRadius);
-      Debug.Log("Sqr Centering radius = " + centeringRadius);
+      Debug.Log("Sqr Centering radius = " + visionRadius);
     }
 
     // Add to boidList
@@ -57,12 +68,14 @@ public class BoidController : MonoBehaviour
   void FixedUpdate ()
   {
     // Step 1: Update spatial awareness (Automatically)
+    // Use collision detection with spheres?
 
     // Step 2: Generate acceleration vectors
     List<Vector3> avoidance = new List<Vector3>();
-    bool flockFound = false;
     Vector3 flockPositionMin = new Vector3();
     Vector3 flockPositionMax = new Vector3();
+    int flockMates = 0;
+    Vector3 flockVelocity = new Vector3();
 
     foreach (Rigidbody boid in boidList)
     {
@@ -75,20 +88,24 @@ public class BoidController : MonoBehaviour
           // If close, move away
           avoidance.Add(displacement.normalized * (-1) * (avoidanceStrength / sqrDist));
         }
-        if (sqrDist < centeringRadius)
+        if (sqrDist < visionRadius)
         {
           // Update awareness of flock
-          if (!flockFound)
+          if (flockMates == 0)
           {
             flockPositionMin = boid.position;
             flockPositionMax = boid.position;
-            flockFound = true;
           }
           else
           {
             flockPositionMin = Vector3.Min(flockPositionMin, boid.position);
             flockPositionMax = Vector3.Max(flockPositionMax, boid.position);
           }
+
+          // Match Velocities
+          flockVelocity += boid.velocity;
+
+          flockMates++;
         }
       }
     }
@@ -97,17 +114,31 @@ public class BoidController : MonoBehaviour
     accelerations.AddRange(avoidance);
 
     Vector3 flockCenter = new Vector3((flockPositionMin.x + flockPositionMax.x) / 2, 0, (flockPositionMin.z + flockPositionMax.z) / 2);
-    if (flockFound)
+    if (flockMates > 0)
+    {
       accelerations.Add((flockCenter - body.position).normalized * centeringStrength);
+      accelerations.Add((((flockVelocity / flockMates) - body.velocity) / timeToMatchVelocity) * body.mass);
+    }
 
     // Step 3: Accumulate acceleration vectors
     // sum each list into its own combined vector representing different forces acting on the boid, adding each to the list of vectors to be accumulated
     Vector3 output = AccumulateAccelerations(accelerations);
 
     // Step 4: Apply acceleration vectors to boid
+    // Change this to use rotation
     body.AddForce(output);
 
-    // need to apply the found vector by rotating towards it, and then applying (a percentage of) its magnitude as a force in the direction currently faced
+    // Make sure velocity is between magnitude (2,10)
+    float speed = body.velocity.magnitude;
+    if (speed < minVelocity) {
+      float fac = minVelocity / speed;
+      body.velocity *= fac;
+    }
+    else if (speed > maxVelocity) {
+      float fac = maxVelocity / speed;
+      body.velocity *= fac;
+    }
+    initialVelocityMin.y = body.velocity.magnitude;
   }
 
   private Vector3 AccumulateAccelerations (ICollection<Vector3> accelerations)
