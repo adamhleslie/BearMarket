@@ -5,13 +5,29 @@ public class BoidController : MonoBehaviour
 {
 	private Rigidbody body;
 
+	// instantaneous velocity max
+	// instantaneous force max
+
 	[SerializeField]
-	private float maxMagnitude;
+	private float maxForceMagnitude;
+
+	[SerializeField]
+	private float repulsionRadius;
+
+	[SerializeField]
+	private float repulsionScale;
+
+	[SerializeField]
+	private float attractionRadius;
+
+	[SerializeField]
+	private float attractionScale;
 
 	// Need to store local awareness of
 	// 1. Boids
-	private static Dictionary<int, Vector3> boidList;
+	private static Dictionary<int, Vector3> boidList = null;
 	private int id;
+	private static int nextId = 0;
 	// 2. Obstacles
 	// 3. Predators
 	private Vector3 predLoc;
@@ -21,12 +37,18 @@ public class BoidController : MonoBehaviour
 	{
 		body = GetComponent<Rigidbody>();
 
-		// Initialize the boidList if needed
+		// Initialize the boidList and square radius's if needed
 		if (boidList == null)
+		{
 			boidList = new Dictionary<int, Vector3>();
+			repulsionRadius = repulsionRadius * repulsionRadius;
+			attractionRadius = attractionRadius * attractionRadius;
+		}
 
-		// Generate new id for this boid
-		id = (int) Random.Range(1.0f,10000.0f);
+		// Generate id for this boid
+		id = nextId;
+		nextId++;
+
 		// Add to boidList
 		boidList.Add(id, body.position);
 	}
@@ -42,25 +64,31 @@ public class BoidController : MonoBehaviour
 		{
 			if (entry.Key != id) 
 			{
-				float dist = Vector3.Distance(entry.Value, body.position);
-				if (dist < 5) 
+				Vector3 displacement = entry.Value - body.position;
+				float sqrDist = displacement.sqrMagnitude;
+				if (sqrDist < repulsionRadius) 
 				{
 					// If close, move away
-					accelerations.Add((body.position - entry.Value) * 20);
+					// add to list of repulsions
+					accelerations.Add(displacement.normalized * (-1) * (repulsionScale / sqrDist));
 				}
-				else if (dist < 15) 
+				else if (sqrDist < attractionRadius) 
 				{
 					// If far, move closer
-					accelerations.Add((entry.Value - body.position) * 2);
+					// add to list of attractions
+					accelerations.Add(displacement.normalized * (attractionScale / sqrDist));
 				}
 			}
 		}
 
 		// Step 3: Accumulate acceleration vectors
+		// sum each list into its own combined vector representing different forces acting on the boid, adding each to the list of vectors to be accumulated
 		Vector3 output = AccumulateAccelerations(accelerations);
 
 		// Step 4: Apply acceleration vectors to boid
 		body.AddForce(output);
+
+		// need to apply the found vector by rotating towards it, and then applying (a percentage of) its magnitude as a force in the direction currently faced
 	}
 
 	private Vector3 AccumulateAccelerations (ICollection<Vector3> accelerations)
@@ -71,10 +99,10 @@ public class BoidController : MonoBehaviour
 		foreach (Vector3 acc in accelerations)
 		{
 			totalMagnitude += acc.magnitude;
-			if (totalMagnitude >= maxMagnitude)
+			if (totalMagnitude >= maxForceMagnitude)
 			{
 				// Scale the acceleration down when its entire magnitude not used
-				float scale = 1 - ((totalMagnitude - maxMagnitude) / acc.magnitude);
+				float scale = 1 - ((totalMagnitude - maxForceMagnitude) / acc.magnitude);
 				result += scale * acc;
 				break;
 			}
