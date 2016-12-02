@@ -9,6 +9,9 @@ public class BoidController : MonoBehaviour
 	// instantaneous force max
 
 	[SerializeField]
+	private Vector3 initialVelocity;
+
+	[SerializeField]
 	private float maxForceMagnitude;
 
 	[SerializeField]
@@ -36,6 +39,7 @@ public class BoidController : MonoBehaviour
 	void Start ()
 	{
 		body = GetComponent<Rigidbody>();
+		body.velocity = initialVelocity;
 
 		// Initialize the boidList and square radius's if needed
 		if (boidList == null)
@@ -59,7 +63,9 @@ public class BoidController : MonoBehaviour
 		boidList[id] = body.position;
 
 		// Step 2: Generate a container of acceleration vectors
-		List<Vector3> accelerations = new List<Vector3>();
+		List<Vector3> repulsions = new List<Vector3>();
+		List<Vector3> attractions = new List<Vector3>();
+		List<Vector3> velocityMatching = new List<Vector3>();
 		foreach (KeyValuePair<int, Vector3> entry in boidList)
 		{
 			if (entry.Key != id) 
@@ -70,19 +76,25 @@ public class BoidController : MonoBehaviour
 				{
 					// If close, move away
 					// add to list of repulsions
-					accelerations.Add(displacement.normalized * (-1) * (repulsionScale / sqrDist));
+					repulsions.Add(displacement.normalized * (-1) * (repulsionScale / sqrDist));
 				}
 				else if (sqrDist < attractionRadius) 
 				{
 					// If far, move closer
 					// add to list of attractions
-					accelerations.Add(displacement.normalized * (attractionScale / sqrDist));
+					attractions.Add(displacement.normalized * (attractionScale / sqrDist));
+
+					// attempt to match velocity of other boid
+					velocityMatching.Add()
 				}
 			}
 		}
 
 		// Step 3: Accumulate acceleration vectors
 		// sum each list into its own combined vector representing different forces acting on the boid, adding each to the list of vectors to be accumulated
+		List<Vector3> accelerations = new List<Vector3>();
+		accelerations.AddRange(repulsions);
+		accelerations.AddRange(attractions);
 		Vector3 output = AccumulateAccelerations(accelerations);
 
 		// Step 4: Apply acceleration vectors to boid
