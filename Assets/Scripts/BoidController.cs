@@ -24,6 +24,9 @@ public class BoidController : MonoBehaviour
     private float avoidanceStrength;
 
   [SerializeField]
+    private float avoidanceWall;
+
+  [SerializeField]
     private float centeringStrength;
 
   [SerializeField]
@@ -151,20 +154,21 @@ public class BoidController : MonoBehaviour
     Vector3 reflectDir = Vector3.zero;
     if (body.velocity != Vector3.zero) {
       RaycastHit hit;
-      if (Physics.Raycast(body.position, body.velocity * 10, out hit,
-            wallDetectDist)) {
+      if (Physics.Raycast(body.position, body.velocity,
+            out hit, wallDetectDist)) {
         // Should always be a wall, but a check just in case
         if (hit.collider.gameObject.tag == "Wall") {
           reflectDir = Vector3.Reflect(body.velocity, hit.normal);
+          reflectDir = reflectDir - body.position;
         }
       }
     }
 
     List<Vector3> accelerations = new List<Vector3>();
-    accelerations.AddRange(avoidance);
     if (reflectDir != Vector3.zero) {
-      accelerations.Add(reflectDir);
+      accelerations.Add(reflectDir.normalized * avoidanceWall);
     }
+    accelerations.AddRange(avoidance);
 
     Vector3 flockCenter = new Vector3((flockPositionMin.x + flockPositionMax.x) / 2, 0, (flockPositionMin.z + flockPositionMax.z) / 2);
     if (flockMates > 0)
