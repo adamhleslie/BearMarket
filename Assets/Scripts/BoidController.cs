@@ -52,9 +52,9 @@ public class BoidController : MonoBehaviour
 	void Start ()
 	{
 		body = GetComponent<Rigidbody>();
-		body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
-				Random.Range(initialVelocityMin.y, initialVelocityMax.y),
-				Random.Range(initialVelocityMin.z, initialVelocityMax.z));
+		// body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
+		// 		Random.Range(initialVelocityMin.y, initialVelocityMax.y),
+		// 		Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
 		avoidanceRadius = avoidanceRadius * avoidanceRadius;
 		visionRadius = visionRadius * visionRadius;
