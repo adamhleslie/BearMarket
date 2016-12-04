@@ -53,9 +53,6 @@ public class BoidController : MonoBehaviour
   public static PlayerBoid player = null;
 
   // 2. Obstacles
-  [SerializeField]
-    public static GameObject[] wallList = null;
-
 
   // 3. Predators
 
@@ -73,11 +70,6 @@ public class BoidController : MonoBehaviour
     // Initialize the boidList
     if (boidList == null)
       boidList = new List<Rigidbody>();
-
-    // Initialize the wallList
-    if (wallList == null) {
-      wallList = GameObject.FindGameObjectsWithTag("Wall");
-    }
 
     // Add self to boidList
     boidList.Add(body);
