@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class BoidController : MonoBehaviour
+public class BoidControllerOrig : MonoBehaviour
 {
 	private Rigidbody body;
 
@@ -38,13 +38,9 @@ public class BoidController : MonoBehaviour
 	[SerializeField]
 	private float minVelocity;
 
-	[SerializeField]
-	private float playerAttractionStrength;
-
 	// Need to store local awareness of
 	// 1. Boids
-	public static List<Rigidbody> boidList = null;
-	public static PlayerBoid player = null;
+	private static List<Rigidbody> boidList = null;
 	// 2. Obstacles
 	// 3. Predators
 
@@ -56,14 +52,17 @@ public class BoidController : MonoBehaviour
 				Random.Range(initialVelocityMin.y, initialVelocityMax.y),
 				Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
-		avoidanceRadius = avoidanceRadius * avoidanceRadius;
-		visionRadius = visionRadius * visionRadius;
-
-		// Initialize the boidList
+		// Initialize the boidList and square radius's if needed
 		if (boidList == null)
+		{
 			boidList = new List<Rigidbody>();
+			avoidanceRadius = avoidanceRadius * avoidanceRadius;
+			visionRadius = visionRadius * visionRadius;
+			Debug.Log("Sqr Avoidance radius = " + avoidanceRadius);
+			Debug.Log("Sqr Centering radius = " + visionRadius);
+		}
 
-		// Add self to boidList
+		// Add to boidList
 		boidList.Add(body);
 	}
 
@@ -85,7 +84,8 @@ public class BoidController : MonoBehaviour
 			body.velocity *= fac;
 		}
 
-		// Step 1: Update spatial awareness (Automatically done)
+		// Step 1: Update spatial awareness (Automatically)
+		// Use collision detection with spheres?
 
 		// Step 2: Generate acceleration vectors
 		List<Vector3> avoidance = new List<Vector3>();
@@ -123,11 +123,6 @@ public class BoidController : MonoBehaviour
 					flockVelocity += boid.velocity;
 
 					flockMates++;
-
-					if (player && boid == player.body && player.attractionEnabled)
-					{
-						avoidance.Add(displacement * playerAttractionStrength);
-					}
 				}
 			}
 		}
