@@ -52,8 +52,8 @@ public class BoidControllerOrig : MonoBehaviour
 				Random.Range(initialVelocityMin.y, initialVelocityMax.y),
 				Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
-		// Initialize the boidList and square radius's if needed
-		if (boidList == null)
+        // Initialize the boidList and square radius's if needed
+        if (boidList == null)
 		{
 			boidList = new List<Rigidbody>();
 			avoidanceRadius = avoidanceRadius * avoidanceRadius;

@@ -5,7 +5,21 @@ public class BoidController : MonoBehaviour
 {
 	private Rigidbody body;
 
-	[SerializeField]
+    //Bear Business
+    public static Rigidbody bearBody = null;
+
+    //Bear Terror Vars
+    [SerializeField]
+    private bool terrorEnabled;
+
+    [SerializeField]
+    private float bearAvoidanceRadius;
+
+    [SerializeField]
+    private float bearAvoidanceStrength;
+
+    //Boid Business
+    [SerializeField]
 	private Vector3 initialVelocityMin;
 
 	[SerializeField]
@@ -45,6 +59,7 @@ public class BoidController : MonoBehaviour
 	// 1. Boids
 	public static List<Rigidbody> boidList = null;
 	public static PlayerBoid player = null;
+    public static PlayerBear bearPlayer = null;
 	// 2. Obstacles
 	// 3. Predators
 
@@ -52,12 +67,16 @@ public class BoidController : MonoBehaviour
 	void Start ()
 	{
 		body = GetComponent<Rigidbody>();
-		// body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
-		// 		Random.Range(initialVelocityMin.y, initialVelocityMax.y),
-		// 		Random.Range(initialVelocityMin.z, initialVelocityMax.z));
+        bearBody = GetComponent<Rigidbody>();
+        // body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
+        // 		Random.Range(initialVelocityMin.y, initialVelocityMax.y),
+        // 		Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
-		avoidanceRadius = avoidanceRadius * avoidanceRadius;
+        avoidanceRadius = avoidanceRadius * avoidanceRadius;
 		visionRadius = visionRadius * visionRadius;
+
+        bearAvoidanceRadius = bearAvoidanceRadius * bearAvoidanceRadius;
+
 
 		// Initialize the boidList
 		if (boidList == null)
@@ -94,7 +113,20 @@ public class BoidController : MonoBehaviour
 		int flockMates = 0;
 		Vector3 flockVelocity = new Vector3();
 
-		foreach (Rigidbody boid in boidList)
+        if (terrorEnabled)
+        {
+            //Fear the Bear
+            Vector3 displacement = bearBody.position - body.position;
+            float sqrDist = displacement.sqrMagnitude;
+            if (sqrDist < bearAvoidanceRadius)
+            {
+                // If close, flee in terror
+                avoidance.Add(displacement.normalized * (-1) * (bearAvoidanceStrength / sqrDist));
+            }
+        }
+
+
+        foreach (Rigidbody boid in boidList)
 		{
 			if (boid != body)
 			{
