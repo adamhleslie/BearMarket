@@ -1,0 +1,5 @@
+Our demo demonstrates our current implementation of flocking. Upon running, you will see two groups of boids spawn, and subsequently behave as they are defined to. To quit the game you must manually close it from your OS. Consecutive runs produce varying behavior, based solely on where the boids are initially spawned.
+
+Flocking is still being tweaked and needs more optimization, but it is on track for the final implementation that will benefit gameplay. We are working on gameplay itself, with a player character and script being made by David. Yuanjie and Adam are both working on making flocking itself better, along with the addition of obstacles.
+
+We seem to be on schedule. Although we have exams to study for, we are all putting in work at this point, and should be prepared to both present and turn in the final project. If we are unable to totally finish, we may have to simplify the gameplay, removing obstacles and progressive difficulty.

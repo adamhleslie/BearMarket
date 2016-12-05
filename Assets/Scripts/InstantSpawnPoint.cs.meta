@@ -1,10 +1,11 @@
 fileFormatVersion: 2
 guid: fb716cd4c98a8dc4b9c1f113e1221dcb
-timeCreated: 1478904808
+timeCreated: 1480276844
 licenseType: Free
 MonoImporter:
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - blueprint: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
