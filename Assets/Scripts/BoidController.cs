@@ -70,22 +70,12 @@ public class BoidController : MonoBehaviour
 	{
 		body = GetComponent<Rigidbody>();
 		body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
-				Random.Range(initialVelocityMin.y, initialVelocityMax.y),
-				Random.Range(initialVelocityMin.z, initialVelocityMax.z));
+									Random.Range(initialVelocityMin.y, initialVelocityMax.y),
+									Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
 		avoidanceRadius = avoidanceRadius * avoidanceRadius;
 		visionRadius = visionRadius * visionRadius;
 		predAvoidanceRadius = predAvoidanceRadius * predAvoidanceRadius;
-
-		// // Initialize active lists
-		// if (boidList == null)
-		// 	boidList = new List<Rigidbody>();
-
-		// if (predPlayers == null)
-		// 	predPlayers = ;
-
-		// if (boidList == null)
-		// 	boidList = ;
 
 		// Add self to boidList
 		boidList.Add(body);
@@ -200,7 +190,6 @@ public class BoidController : MonoBehaviour
 			cube.transform.position = flockCenter;
 			cube.transform.localScale = flockPositionMax - flockPositionMin;
 		}
-
 
 		// Step 3: Accumulate acceleration vectors
 		Vector3 output = AccumulateAccelerations(accelerations);
