@@ -109,14 +109,15 @@ public class BoidController : MonoBehaviour
     RaycastHit hit;
     bool closeWall = false;
 
-    if (Physics.Raycast(body.position, body.velocity,
+    if (Physics.SphereCast(body.position, 8f, body.velocity,
           out hit, wallDetectDist)) {
       // Should always be a wall, but a check just in case
       if (hit.collider.gameObject.tag == "Wall") {
         reflectDir = Vector3.Reflect(body.velocity.normalized *
-            (hit.distance), hit.normal) + hit.point;
-          reflectDir = (reflectDir - body.position);
-        if (hit.distance < wallDetectDist / 5) {
+            hit.distance, hit.normal);
+        reflectDir = (reflectDir + body.velocity);
+
+        if (hit.distance < 5) {
           closeWall = true;
         }
       }
@@ -132,7 +133,9 @@ public class BoidController : MonoBehaviour
       {
         Vector3 displacement = boid.position - body.position;
         float sqrDist = displacement.sqrMagnitude;
-        if (sqrDist < avoidanceRadius)
+        if (sqrDist < avoidanceRadius &&
+            !Physics.Raycast(body.position, displacement,
+              displacement.magnitude))
         {
           // If close, move away
           avoidance.Add(displacement.normalized * (-1) * (avoidanceStrength / sqrDist));
@@ -185,10 +188,12 @@ public class BoidController : MonoBehaviour
     // Step 4: Apply acceleration vectors to boid
     body.AddForce(output);
 
+    /*
     if (closeWall) {
       float scaleVec = maxVelocity * reflectDir.magnitude / body.velocity.magnitude;
       body.AddForce(reflectDir / scaleVec);
     }
+    */
   }
 
   private Vector3 AccumulateAccelerations (ICollection<Vector3> accelerations)
