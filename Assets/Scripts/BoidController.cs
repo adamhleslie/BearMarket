@@ -133,9 +133,7 @@ public class BoidController : MonoBehaviour
       {
         Vector3 displacement = boid.position - body.position;
         float sqrDist = displacement.sqrMagnitude;
-        if (sqrDist < avoidanceRadius &&
-            !Physics.Raycast(body.position, displacement,
-              displacement.magnitude))
+        if (sqrDist < avoidanceRadius)
         {
           // If close, move away
           avoidance.Add(displacement.normalized * (-1) * (avoidanceStrength / sqrDist));
