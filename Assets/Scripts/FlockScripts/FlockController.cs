@@ -24,6 +24,10 @@ public class FlockController : MonoBehaviour
 
 	// Boid Flocking Vars
 	[SerializeField]
+	private int updatesToWait;
+	private int curUpdatesToWait;
+
+	[SerializeField]
 	private float forceAccumulationMax;
 
 	[SerializeField]
@@ -45,6 +49,9 @@ public class FlockController : MonoBehaviour
 	private float velocityMatchScale;
 
 	[SerializeField]
+	private bool matchVelocityBeforeCentering;
+
+	[SerializeField]
 	private Vector2 velocityClamp;
 
 	// Player Boid Vars
@@ -64,8 +71,8 @@ public class FlockController : MonoBehaviour
 	[SerializeField]
 	private float predAvoidanceStrength;
 
-	// Awareness of all boids, obstacles, and predators
-	private List<Rigidbody> boidList = new List<Rigidbody>();
+	// Awareness of all boids, players, obstacles, and predators
+	private List<BoidInfo> boidList = new List<BoidInfo>();
 
 	[SerializeField]
 	private FlockPlayerBoid[] boidPlayers;
@@ -94,50 +101,60 @@ public class FlockController : MonoBehaviour
 			body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
 										Random.Range(initialVelocityMin.y, initialVelocityMax.y),
 										Random.Range(initialVelocityMin.z, initialVelocityMax.z));
-			boidList.Add(body);
+			boidList.Add(new BoidInfo(body));
 
 			numToSpawn--;
 		}
 
+		// Place player boids last
 		foreach (FlockPlayerBoid player in boidPlayers)
 		{
-			boidList.Add(player.GetComponent<Rigidbody>());
+			boidList.Add(new BoidInfo(player.GetComponent<Rigidbody>()));
 		} 
 
 		// Use sqr distances for efficiency
 		avoidanceRadius = avoidanceRadius * avoidanceRadius;
 		visionRadius = visionRadius * visionRadius;
 		predAvoidanceRadius = predAvoidanceRadius * predAvoidanceRadius;
+		curUpdatesToWait = updatesToWait;
 	}
 
 	void FixedUpdate ()
 	{
-		foreach (Rigidbody body in boidList)
+		bool updatePlayersOnly = false;
+		if (curUpdatesToWait > 0)
 		{
+			curUpdatesToWait--;
+
+			// Ignore non-player changes, use the same forces from last update
+			foreach (BoidInfo boid in boidList)
+			{
+				boid.ReapplyForces();
+			}
+			updatePlayersOnly = true;
+		}
+		else
+		{
+			curUpdatesToWait = updatesToWait;
+		}
+
+		// Assume player boids are last in boidList
+		int lastActiveBoid = (updatePlayersOnly) ? (boidList.Count - boidPlayers.Length) : 0;
+		for (int activeBoid = boidList.Count - 1; activeBoid >= lastActiveBoid; activeBoid--)
+		{
+			BoidInfo boid = boidList[activeBoid];
+
 			// Clamp velocity to a valid magnitude
-			float speed = body.velocity.magnitude;
-			if (speed == 0)
-			{
-				body.velocity = new Vector3(velocityClamp.x, 0, 0);
-			}
-			else if (speed < velocityClamp.x)
-			{
-				float fac = velocityClamp.x / speed;
-				body.velocity *= fac;
-			}
-			else if (speed > velocityClamp.y)
-			{
-				float fac = velocityClamp.y / speed;
-				body.velocity *= fac;
-			}
+			boid.ClampVelocity(velocityClamp.x, velocityClamp.y);
 
 			// Turn the boid to it's current velocity
-			body.rotation = Quaternion.LookRotation(body.velocity);
+			boid.UpdateRotation();
 
 			// Step 1: Update spatial awareness (Automatically done)
 
-			// Step 2: Generate acceleration vectors
-			List<Vector3> playerInfluence = new List<Vector3>();
+			// Step 2: Generate force vectors
+
+			// 2.1 Player Influences
 			// if (predAvoidanceEnabled)
 			// {
 			// 	// Fear the Pred
@@ -148,7 +165,7 @@ public class FlockController : MonoBehaviour
 			// 		if (sqrDist < predAvoidanceRadius)
 			// 		{
 			// 			// If close, flee in terror
-			// 			playerInfluence.Add(displacement.normalized * (-1) * (predAvoidanceStrength / sqrDist));
+			// 			boid.AddForce(displacement.normalized * (-1) * (predAvoidanceStrength / sqrDist));
 			// 		}
 			// 	}
 			// }
@@ -158,90 +175,174 @@ public class FlockController : MonoBehaviour
 				{
 					if (player.attractionEnabled)
 					{
-						Vector3 displacement = player.body.position - body.position;
+						Vector3 displacement = player.body.position - boid.body.position;
 						float sqrDist = displacement.sqrMagnitude;
 						if (sqrDist < visionRadius)
 						{
-							playerInfluence.Add(displacement.normalized * playerAttractionStrength);
+							boid.AddForce(displacement.normalized * playerAttractionStrength);
 						}
 					}
 				}
 			}
 
-			List<Vector3> avoidance = new List<Vector3>();
-			Vector3 flockPositionMin = new Vector3();
-			Vector3 flockPositionMax = new Vector3();
-			int flockMates = 0;
-			Vector3 flockVelocity = new Vector3();
+			// 2.2 Collision Avoidance
 
-			foreach (Rigidbody boid in boidList)
+			// 2.3 Flock Behavior
+			for (int curFlockMate = 0; curFlockMate < activeBoid; curFlockMate++)
 			{
-				if (boid != body)
+				BoidInfo flockMate = boidList[curFlockMate];
+
+				Vector3 displacement = flockMate.body.position - boid.body.position;
+				float sqrDist = displacement.sqrMagnitude;
+				if (sqrDist < visionRadius)
 				{
-					Vector3 displacement = boid.position - body.position;
-					float sqrDist = displacement.sqrMagnitude;
+					// Update awareness of flock
+					boid.AddFlockMate(flockMate.body);
+					flockMate.AddFlockMate(boid.body);
+
 					if (sqrDist < avoidanceRadius)
 					{
 						// If close, move away
-						avoidance.Add(displacement.normalized * (-1) * (avoidanceStrength / sqrDist));
-					}
-					if (sqrDist < visionRadius)
-					{
-						// Update awareness of flock
-						if (flockMates == 0)
-						{
-							flockPositionMin = boid.position;
-							flockPositionMax = boid.position;
-						}
-						else
-						{
-							flockPositionMin = Vector3.Min(flockPositionMin, boid.position);
-							flockPositionMax = Vector3.Max(flockPositionMax, boid.position);
-						}
-
-						// Accumulate Velocities
-						flockVelocity += boid.velocity;
-						flockMates++;
+						Vector3 avoidanceVector = displacement.normalized * (avoidanceStrength / sqrDist);
+						boid.AddForce(avoidanceVector * (-1));
+						flockMate.AddForce(avoidanceVector);
 					}
 				}
 			}
 
-			List<Vector3> accelerations = new List<Vector3>();
-			accelerations.AddRange(playerInfluence);
-			accelerations.AddRange(avoidance);
-
-			Vector3 flockCenter = new Vector3((flockPositionMin.x + flockPositionMax.x) / 2, (flockPositionMin.y + flockPositionMax.y) / 2, (flockPositionMin.z + flockPositionMax.z) / 2);
-			if (flockMates > 0)
+			if (matchVelocityBeforeCentering)
 			{
-				accelerations.Add((flockCenter - body.position).normalized * centeringStrength);
-				accelerations.Add(((((flockVelocity / flockMates) * velocityMatchScale) - body.velocity) / timeToMatchVelocity) * body.mass);
+				boid.GenerateVelocityMatching(velocityMatchScale, timeToMatchVelocity);
+				boid.GenerateCentering(centeringStrength);
+			}
+			else
+			{
+				boid.GenerateCentering(centeringStrength);
+				boid.GenerateVelocityMatching(velocityMatchScale, timeToMatchVelocity);
 			}
 
-			// Step 3: Accumulate acceleration vectors
-			Vector3 output = AccumulateAccelerations(accelerations);
+			// Step 3: Accumulate and apply force vectors to boid
+			boid.ApplyForces(forceAccumulationMax);
+			boid.Reset();
+		}
+	}
+}
 
-			// Step 4: Apply acceleration vectors to boid
-			body.AddForce(output);
+public class BoidInfo
+{
+	private List<Vector3> forces = new List<Vector3>();
+	private Vector3 accumulatedForces = new Vector3();
+	private Vector3 flockVelocity = new Vector3();
+	private Vector3 flockPositionMin = new Vector3();
+	private Vector3 flockPositionMax = new Vector3();
+	private int flockMates = 0;
+	public Rigidbody body;
+
+	public BoidInfo (Rigidbody boidBody)
+	{
+		body = boidBody;
+	}
+
+	public void Reset ()
+	{
+		forces.Clear();
+		flockVelocity.Set(0, 0, 0);
+		flockPositionMin.Set(0, 0, 0);
+		flockPositionMax.Set(0, 0, 0);
+		flockMates = 0;
+	}
+
+	public void AddForce (Vector3 force)
+	{
+		forces.Add(force);
+	}
+
+	public void AddFlockMate (Rigidbody flockMate)
+	{
+		// Update perception of flock for centering
+		if (flockMates == 0)
+		{
+			flockPositionMin = flockMate.position;
+			flockPositionMax = flockMate.position;
+		}
+		else
+		{
+			flockPositionMin = Vector3.Min(flockPositionMin, flockMate.position);
+			flockPositionMax = Vector3.Max(flockPositionMax, flockMate.position);
+		}
+
+		// Accumulate velocity for velocity matching
+		flockVelocity += flockMate.velocity;
+		flockMates++;
+	}
+
+	public void GenerateCentering (float centeringStrength)
+	{
+		if (flockMates > 0)
+		{
+			Vector3 flockCenter = (flockPositionMin + flockPositionMax) / 2;
+			AddForce((flockCenter - body.position).normalized * centeringStrength);
 		}
 	}
 
-	private Vector3 AccumulateAccelerations (ICollection<Vector3> accelerations)
+	public void GenerateVelocityMatching (float velocityMatchScale, float timeToMatchVelocity)
+	{
+		if (flockMates > 0)
+			AddForce((((flockVelocity / flockMates) * velocityMatchScale) - body.velocity) / timeToMatchVelocity);
+	}
+
+	public void ApplyForces (float forceAccumulationMax)
+	{
+		accumulatedForces = AccumulateForces(forces, forceAccumulationMax);
+		body.AddForce(accumulatedForces);
+	}
+
+	public void ReapplyForces ()
+	{
+		body.AddForce(accumulatedForces);
+	}
+
+	public void ClampVelocity (float min, float max)
+	{
+		float speed = body.velocity.magnitude;
+		if (speed == 0)
+		{
+			body.velocity = new Vector3(min, 0, 0);
+		}
+		else if (speed < min)
+		{
+			float fac = min / speed;
+			body.velocity *= fac;
+		}
+		else if (speed > max)
+		{
+			float fac = max / speed;
+			body.velocity *= fac;
+		}
+	}
+
+	public void UpdateRotation ()
+	{
+		body.rotation = Quaternion.LookRotation(body.velocity);
+	}
+
+	private Vector3 AccumulateForces (ICollection<Vector3> forces, float forceAccumulationMax)
 	{
 		float totalMagnitude = 0;
 		Vector3 result = Vector3.zero;
 
-		foreach (Vector3 acc in accelerations)
+		foreach (Vector3 f in forces)
 		{
-			totalMagnitude += acc.magnitude;
+			totalMagnitude += f.magnitude;
 			if (totalMagnitude >= forceAccumulationMax)
 			{
-				// Scale the acceleration down when its entire magnitude not used
-				float scale = 1 - ((totalMagnitude - forceAccumulationMax) / acc.magnitude);
-				result += scale * acc;
+				// Scale the force down when its entire magnitude not used
+				float scale = 1 - ((totalMagnitude - forceAccumulationMax) / f.magnitude);
+				result += scale * f;
 				break;
 			}
 			else
-				result += acc;
+				result += f;
 		}
 
 		return result;
