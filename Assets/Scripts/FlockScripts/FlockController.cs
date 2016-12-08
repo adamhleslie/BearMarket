@@ -61,7 +61,7 @@ public class FlockController : MonoBehaviour
 	[SerializeField]
 	private float playerAttractionStrength;
 
-	// Pred Vars
+	// Predator Vars
 	[SerializeField]
 	private bool predAvoidanceEnabled;
 
@@ -70,6 +70,19 @@ public class FlockController : MonoBehaviour
 
 	[SerializeField]
 	private float predAvoidanceStrength;
+
+	// Collision Detection Vars
+	[SerializeField]
+	private bool collisionAvoidanceEnabled;
+
+	[SerializeField]
+	private int collisionLayer;
+
+	[SerializeField]
+	private float wallDetectDist;
+
+	[SerializeField]
+	private float wallAvoidanceStrength;
 
 	// Awareness of all boids, players, obstacles, and predators
 	private List<BoidInfo> boidList = new List<BoidInfo>();
@@ -117,6 +130,9 @@ public class FlockController : MonoBehaviour
 		visionRadius = visionRadius * visionRadius;
 		predAvoidanceRadius = predAvoidanceRadius * predAvoidanceRadius;
 		curUpdatesToWait = updatesToWait;
+
+		// Update collision layer to be a valid mask
+		collisionLayer = (collisionLayer > 0) ? (1 << collisionLayer) : 0;
 	}
 
 	void FixedUpdate ()
@@ -186,6 +202,23 @@ public class FlockController : MonoBehaviour
 			}
 
 			// 2.2 Collision Avoidance
+			if (collisionAvoidanceEnabled)
+			{
+				RaycastHit hit;
+				if (Physics.Raycast(boid.body.position, boid.body.velocity, out hit, wallDetectDist, collisionLayer)) 
+				{
+					Vector3 reflectDir = Vector3.Reflect(boid.body.velocity.normalized * (hit.distance), hit.normal) + hit.point;
+					reflectDir -= boid.body.position;
+					boid.AddForce(reflectDir.normalized * wallAvoidanceStrength);
+
+					// If too close, manually change the velocity
+					if (hit.distance < wallDetectDist / 5 && reflectDir != Vector3.zero) 
+					{
+						float scaleVec = reflectDir.magnitude / boid.body.velocity.magnitude;
+						boid.body.velocity = reflectDir / scaleVec;
+					}
+				}
+			}
 
 			// 2.3 Flock Behavior
 			for (int curFlockMate = 0; curFlockMate < activeBoid; curFlockMate++)
@@ -200,9 +233,9 @@ public class FlockController : MonoBehaviour
 					boid.AddFlockMate(flockMate.body);
 					flockMate.AddFlockMate(boid.body);
 
+					// If close, move away
 					if (sqrDist < avoidanceRadius)
 					{
-						// If close, move away
 						Vector3 avoidanceVector = displacement.normalized * (avoidanceStrength / sqrDist);
 						boid.AddForce(avoidanceVector * (-1));
 						flockMate.AddForce(avoidanceVector);
