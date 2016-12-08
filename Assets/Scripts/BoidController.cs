@@ -103,6 +103,28 @@ public class BoidController : MonoBehaviour
     int flockMates = 0;
     Vector3 flockVelocity = new Vector3();
 
+    // Step 2.0: Generate vector based on walls
+    Vector3 reflectDir = Vector3.zero;
+    List<Vector3> accelerations = new List<Vector3>();
+    RaycastHit hit;
+    bool closeWall = false;
+
+    if (Physics.Raycast(body.position, body.velocity,
+          out hit, wallDetectDist)) {
+      // Should always be a wall, but a check just in case
+      if (hit.collider.gameObject.tag == "Wall") {
+        reflectDir = Vector3.Reflect(body.velocity.normalized *
+            (hit.distance), hit.normal) + hit.point;
+          reflectDir = (reflectDir - body.position);
+        if (hit.distance < wallDetectDist / 5) {
+          closeWall = true;
+        }
+      }
+    }
+    if (reflectDir != Vector3.zero) {
+      accelerations.Add(reflectDir.normalized * avoidanceWall);
+    }
+
     // Step 2.1: Generate vectors based on boids
     foreach (Rigidbody boid in boidList)
     {
@@ -142,7 +164,6 @@ public class BoidController : MonoBehaviour
       }
     }
 
-    List<Vector3> accelerations = new List<Vector3>();
     accelerations.AddRange(avoidance);
 
     Vector3 flockCenter = new Vector3((flockPositionMin.x +
@@ -157,26 +178,6 @@ public class BoidController : MonoBehaviour
             timeToMatchVelocity) * body.mass);
     }
 
-    // Step 2.2: Generate vector based on walls
-    Vector3 reflectDir = Vector3.zero;
-    RaycastHit hit;
-    bool closeWall = false;
-
-    if (Physics.Raycast(body.position, body.velocity,
-          out hit, wallDetectDist)) {
-      // Should always be a wall, but a check just in case
-      if (hit.collider.gameObject.tag == "Wall") {
-        reflectDir = Vector3.Reflect(body.velocity.normalized *
-            (hit.distance), hit.normal) + hit.point;
-          reflectDir = (reflectDir - body.position);
-        if (hit.distance < wallDetectDist / 5) {
-          closeWall = true;
-        }
-      }
-    }
-    if (reflectDir != Vector3.zero) {
-      accelerations.Add(reflectDir.normalized * avoidanceWall);
-    }
 
     // Step 3: Accumulate acceleration vectors
     Vector3 output = AccumulateAccelerations(accelerations);
@@ -185,8 +186,8 @@ public class BoidController : MonoBehaviour
     body.AddForce(output);
 
     if (closeWall) {
-      float scaleVec = reflectDir.magnitude / body.velocity.magnitude;
-      body.velocity = reflectDir / scaleVec;
+      float scaleVec = maxVelocity * reflectDir.magnitude / body.velocity.magnitude;
+      body.AddForce(reflectDir / scaleVec);
     }
   }
 
