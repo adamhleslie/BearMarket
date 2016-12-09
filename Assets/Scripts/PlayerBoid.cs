@@ -16,10 +16,9 @@ public class PlayerBoid : MonoBehaviour
 	void Start () 
 	{
 		body = GetComponent<Rigidbody>();
-		if (BoidController.boidList == null)
-			BoidController.boidList = new List<Rigidbody>();
+
+		BoidController.boidPlayers.Add(this);
 		BoidController.boidList.Add(body);
-		BoidController.player = this;
 
 		attractionEnabled = false;
 	}

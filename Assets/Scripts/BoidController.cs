@@ -5,21 +5,8 @@ public class BoidController : MonoBehaviour
 {
 	private Rigidbody body;
 
-    //Bear Business
-    public static Rigidbody bearBody = null;
-
-    //Bear Terror Vars
-    [SerializeField]
-    private bool terrorEnabled;
-
-    [SerializeField]
-    private float bearAvoidanceRadius;
-
-    [SerializeField]
-    private float bearAvoidanceStrength;
-
-    //Boid Business
-    [SerializeField]
+	// Boid Flocking Vars
+	[SerializeField]
 	private Vector3 initialVelocityMin;
 
 	[SerializeField]
@@ -53,34 +40,42 @@ public class BoidController : MonoBehaviour
 	private float minVelocity;
 
 	[SerializeField]
+	private bool drawFlock;
+	GameObject cube;
+
+	// Player Boid Vars
+	[SerializeField]
+	private bool playerAttractionEnabled;
+
+	[SerializeField]
 	private float playerAttractionStrength;
 
-	// Need to store local awareness of
-	// 1. Boids
-	public static List<Rigidbody> boidList = null;
-	public static PlayerBoid player = null;
-    public static PlayerBear bearPlayer = null;
-	// 2. Obstacles
-	// 3. Predators
+	// Pred Vars
+	[SerializeField]
+	private bool predAvoidanceEnabled;
+
+	[SerializeField]
+	private float predAvoidanceRadius;
+
+	[SerializeField]
+	private float predAvoidanceStrength;
+
+	// Awareness of all boids, obstacles, and preds
+	public static List<Rigidbody> boidList = new List<Rigidbody>();
+	public static List<PlayerBoid> boidPlayers = new List<PlayerBoid>();
+	public static List<PlayerPredator> predPlayers = new List<PlayerPredator>();
 
 	// Initialization
 	void Start ()
 	{
 		body = GetComponent<Rigidbody>();
-        bearBody = GetComponent<Rigidbody>();
-        // body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
-        // 		Random.Range(initialVelocityMin.y, initialVelocityMax.y),
-        // 		Random.Range(initialVelocityMin.z, initialVelocityMax.z));
+		body.velocity = new Vector3(Random.Range(initialVelocityMin.x, initialVelocityMax.x),
+									Random.Range(initialVelocityMin.y, initialVelocityMax.y),
+									Random.Range(initialVelocityMin.z, initialVelocityMax.z));
 
-        avoidanceRadius = avoidanceRadius * avoidanceRadius;
+		avoidanceRadius = avoidanceRadius * avoidanceRadius;
 		visionRadius = visionRadius * visionRadius;
-
-        bearAvoidanceRadius = bearAvoidanceRadius * bearAvoidanceRadius;
-
-
-		// Initialize the boidList
-		if (boidList == null)
-			boidList = new List<Rigidbody>();
+		predAvoidanceRadius = predAvoidanceRadius * predAvoidanceRadius;
 
 		// Add self to boidList
 		boidList.Add(body);
@@ -88,10 +83,7 @@ public class BoidController : MonoBehaviour
 
 	void FixedUpdate ()
 	{
-		// Turn the boid to it's current velocity
-		body.rotation = Quaternion.LookRotation(body.velocity);
-
-		// Make sure velocity is between magnitude (2,10)
+		// Clamp velocity to a valid magnitude
 		float speed = body.velocity.magnitude;
 		if (speed < minVelocity)
 		{
@@ -104,29 +96,50 @@ public class BoidController : MonoBehaviour
 			body.velocity *= fac;
 		}
 
+		// Turn the boid to it's current velocity
+		body.rotation = Quaternion.LookRotation(body.velocity);
+
 		// Step 1: Update spatial awareness (Automatically done)
 
 		// Step 2: Generate acceleration vectors
+		List<Vector3> playerInfluence = new List<Vector3>();
+		if (predAvoidanceEnabled)
+		{
+			// Fear the Pred
+			foreach (PlayerPredator pred in predPlayers)
+			{
+				Vector3 displacement = pred.body.position - body.position;
+				float sqrDist = displacement.sqrMagnitude;
+				if (sqrDist < predAvoidanceRadius)
+				{
+					// If close, flee in terror
+					playerInfluence.Add(displacement.normalized * (-1) * (predAvoidanceStrength / sqrDist));
+				}
+			}
+		}
+		if (playerAttractionEnabled)
+		{
+			foreach (PlayerBoid player in boidPlayers)
+			{
+				if (player.attractionEnabled)
+				{
+					Vector3 displacement = player.body.position - body.position;
+					float sqrDist = displacement.sqrMagnitude;
+					if (sqrDist < visionRadius)
+					{
+						playerInfluence.Add(displacement.normalized * playerAttractionStrength);
+					}
+				}
+			}
+		}
+
 		List<Vector3> avoidance = new List<Vector3>();
 		Vector3 flockPositionMin = new Vector3();
 		Vector3 flockPositionMax = new Vector3();
 		int flockMates = 0;
 		Vector3 flockVelocity = new Vector3();
 
-        if (terrorEnabled)
-        {
-            //Fear the Bear
-            Vector3 displacement = bearBody.position - body.position;
-            float sqrDist = displacement.sqrMagnitude;
-            if (sqrDist < bearAvoidanceRadius)
-            {
-                // If close, flee in terror
-                avoidance.Add(displacement.normalized * (-1) * (bearAvoidanceStrength / sqrDist));
-            }
-        }
-
-
-        foreach (Rigidbody boid in boidList)
+		foreach (Rigidbody boid in boidList)
 		{
 			if (boid != body)
 			{
@@ -151,27 +164,31 @@ public class BoidController : MonoBehaviour
 						flockPositionMax = Vector3.Max(flockPositionMax, boid.position);
 					}
 
-					// Match Velocities
+					// Accumulate Velocities
 					flockVelocity += boid.velocity;
-
 					flockMates++;
-
-					if (player && boid == player.body && player.attractionEnabled)
-					{
-						avoidance.Add(displacement * playerAttractionStrength);
-					}
 				}
 			}
 		}
 
 		List<Vector3> accelerations = new List<Vector3>();
+		accelerations.AddRange(playerInfluence);
 		accelerations.AddRange(avoidance);
 
-		Vector3 flockCenter = new Vector3((flockPositionMin.x + flockPositionMax.x) / 2, 0, (flockPositionMin.z + flockPositionMax.z) / 2);
+		Vector3 flockCenter = new Vector3((flockPositionMin.x + flockPositionMax.x) / 2, (flockPositionMin.y + flockPositionMax.y) / 2, (flockPositionMin.z + flockPositionMax.z) / 2);
 		if (flockMates > 0)
 		{
 			accelerations.Add((flockCenter - body.position).normalized * centeringStrength);
 			accelerations.Add(((((flockVelocity / flockMates) * velocityMatchScale) - body.velocity) / timeToMatchVelocity) * body.mass);
+		}
+
+		if (drawFlock)
+		{
+			Destroy(cube);
+			cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+			flockCenter.y += 3;
+			cube.transform.position = flockCenter;
+			cube.transform.localScale = flockPositionMax - flockPositionMin;
 		}
 
 		// Step 3: Accumulate acceleration vectors
