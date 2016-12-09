@@ -92,11 +92,12 @@ public class FlockController : MonoBehaviour
   [SerializeField]
     private FlockPlayerBoid[] initialBoidPlayers;
 
+  [SerializeField]
+    private PlayerPredator[] predPlayers;
+
   // Awareness of all boids, players, obstacles, and predators
   private List<Boid> boidList = new List<Boid>();
   private List<FlockPlayerBoid> boidPlayers = new List<FlockPlayerBoid>();
-
-  // public static List<PlayerPredator> predPlayers = new List<PlayerPredator>();
 
   // Spawn all boids
   void Start ()
@@ -213,20 +214,23 @@ public class FlockController : MonoBehaviour
       // Step 2: Generate force vectors
 
       // 2.1 Player Influences
-      // if (predAvoidanceEnabled)
-      // {
-      // 	// Fear the Pred
-      // 	foreach (PlayerPredator pred in predPlayers)
-      // 	{
-      // 		Vector3 displacement = pred.body.position - body.position;
-      // 		float sqrDist = displacement.sqrMagnitude;
-      // 		if (sqrDist < predAvoidanceRadius)
-      // 		{
-      // 			// If close, flee in terror
-      // 			boid.AddForce(displacement.normalized * (-1) * (predAvoidanceStrength / sqrDist));
-      // 		}
-      // 	}
-      // }
+      // DON'T GET EATEN
+      if (predAvoidanceEnabled)
+      {
+        // Fear the Pred
+        foreach (PlayerPredator pred in predPlayers)
+        {
+          Vector3 displacement = pred.body.position - boid.body.position;
+          float sqrDist = displacement.sqrMagnitude;
+          if (sqrDist < predAvoidanceRadius)
+          {
+            // If close, flee in terror
+            boid.AddForce(displacement.normalized * (-1) *
+                (predAvoidanceStrength));
+          }
+        }
+      }
+
       if (playerAttractionEnabled)
       {
         foreach (FlockPlayerBoid player in boidPlayers)
