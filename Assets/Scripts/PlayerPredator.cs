@@ -51,7 +51,7 @@ public class PlayerPredator : MonoBehaviour
 
 		trueTimeLeft = timeLeft;
 
-		time.text = timeText + (trueTimeLeft  - (trueTimeLeft % 1));
+		time.text = (timeText + Mathf.Ceil(trueTimeLeft));
 		if (!multi)
 		{
 			scoreTxt.text = boidText + score;
@@ -73,14 +73,14 @@ public class PlayerPredator : MonoBehaviour
 		if (!gameOver) 
 		{
 			trueTimeLeft -= Time.deltaTime;
-			time.text = timeText + (trueTimeLeft  - (trueTimeLeft % 1));
+			time.text = (timeText + Mathf.Ceil(trueTimeLeft));
 			if (trueTimeLeft < 0) 
 			{
 				time.text = timeText + "0";
 				reset.gameObject.SetActive(true);
 				endGameText.gameObject.SetActive(true);
 				if (!multi)
-					endGameText.text = overText + score + " Birdnessmen in " + (timeLeft - 1) + "s";
+					endGameText.text = overText + score + " Birdnessmen in " + (timeLeft) + "s";
 				else
 					endGameText.text = "THE BIRD WON!";
 				GameOver();
