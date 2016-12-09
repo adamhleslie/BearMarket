@@ -21,17 +21,11 @@ public class Boid : MonoBehaviour
 		body = GetComponent<Rigidbody>();
 	}
 
-	void OnDelete ()
+	void OnDestroy()
 	{
 		if (flock != null)
 			flock.RemoveBoid(this);
 	}
-
-        void OnDestroy()
-        {
-          if (flock != null)
-            flock.RemoveBoid(this);
-        }
 
 	public void ResetState ()
 	{

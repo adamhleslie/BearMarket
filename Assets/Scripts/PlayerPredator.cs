@@ -3,94 +3,130 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 
-public class PlayerPredator : MonoBehaviour {
+public class PlayerPredator : MonoBehaviour 
+{
+	public Rigidbody body;
 
-  public Rigidbody body;
+	[SerializeField]
+	private float horizSpeed;
 
-  [SerializeField]
-    private float horizSpeed;
+	[SerializeField]
+	private float vertSpeed;
 
-  [SerializeField]
-    private float vertSpeed;
+	[SerializeField]
+	private float timeLeft;
+	private float trueTimeLeft;
 
-  [SerializeField]
-    private float timeLeft;
+	public float maxVelocity;
 
-  public float maxVelocity;
+	private int score = 0;
+	public Text time;
+	public Text scoreTxt;
+	public Text endGameText;
+	public Button reset;
+	private bool gameOver = false;
 
-  private int score = 0;
-  public Text time;
-  public Text scoreTxt;
-  public Text endGameText;
-  public Button reset;
-  private bool gameOver = false;
+	public string timeText;
+	public string boidText;
+	public string overText;
 
-  public string timeText;
-  public string boidText;
+	public string horizAxis;
+	public string vertAxis;
 
-  // Use this for initialization
-  void Start ()
-  {
-    body = GetComponent<Rigidbody>();
+	[System.NonSerialized]
+	public bool playerKilled;
+	public bool multi;
 
-    BoidController.predPlayers.Add(this);
+	// Use this for initialization
+	void Start ()
+	{
+		body = GetComponent<Rigidbody>();
 
-    reset.gameObject.SetActive(false);
-    endGameText.gameObject.SetActive(false);
+		BoidController.predPlayers.Add(this);
 
-    reset.onClick.AddListener(TaskOnClick);
+		reset.gameObject.SetActive(false);
+		endGameText.gameObject.SetActive(false);
 
-    time.text = timeText + (timeLeft  - (timeLeft % 1));
-    scoreTxt.text = boidText + score;
-  }
+		reset.onClick.AddListener(TaskOnClick);
 
-  void Update () {
-    body.rotation = Quaternion.LookRotation(body.velocity);
-    if (!gameOver) {
-      timeLeft -= Time.deltaTime;
-      time.text = timeText + (timeLeft  - (timeLeft % 1));
-      if (timeLeft < 0) {
-        time.text = timeText + "0";
-        reset.gameObject.SetActive(true);
-        endGameText.gameObject.SetActive(true);
-        GameOver();
-      }
-      else if (timeLeft <= 10)
-      {
-        time.text = timeText + (timeLeft  - (timeLeft % .1));
-      }
-    }
-  }
+		trueTimeLeft = timeLeft;
 
-  void FixedUpdate ()
-  {
-    if (!gameOver) {
-      body.AddForce(new Vector3(Input.GetAxis("Horizontal") * horizSpeed,
-          0, Input.GetAxis("Vertical") * vertSpeed));
+		time.text = timeText + (trueTimeLeft  - (trueTimeLeft % 1));
+		if (!multi)
+		{
+			scoreTxt.text = boidText + score;
+		}
+		else
+			scoreTxt.text = "";
+	}
 
-      float speed = body.velocity.magnitude;
-      if (speed > maxVelocity)
-      {
-        float fac = maxVelocity / speed;
-        body.velocity *= fac;
-      }
-    }
-  }
+	void Update () 
+	{
+		if (playerKilled)
+		{
+			reset.gameObject.SetActive(true);
+			endGameText.gameObject.SetActive(true);
+			endGameText.text = "THE BEAR WON in " + ((timeLeft - trueTimeLeft) - ((timeLeft - trueTimeLeft) % .1)) + "s";
+			GameOver();
+		}
+		body.rotation = Quaternion.LookRotation(body.velocity);
+		if (!gameOver) 
+		{
+			trueTimeLeft -= Time.deltaTime;
+			time.text = timeText + (trueTimeLeft  - (trueTimeLeft % 1));
+			if (trueTimeLeft < 0) 
+			{
+				time.text = timeText + "0";
+				reset.gameObject.SetActive(true);
+				endGameText.gameObject.SetActive(true);
+				if (!multi)
+					endGameText.text = overText + score + " Birdnessmen in " + (timeLeft - 1) + "s";
+				else
+					endGameText.text = "THE BIRD WON!";
+				GameOver();
+			}
+			else if (trueTimeLeft <= 10)
+			{
+				time.text = timeText + (trueTimeLeft  - (trueTimeLeft % .1));
+			}
+		}
+	}
 
-  void OnCollisionEnter(Collision other) {
-    if (!gameOver && other.gameObject.layer != 9) {
-      Destroy(other.gameObject);
-      score++;
-      scoreTxt.text = boidText + score;
-    }
-  }
+	void FixedUpdate ()
+	{
+		if (!gameOver) {
+			body.AddForce(new Vector3(Input.GetAxis(horizAxis) * horizSpeed,
+					0, Input.GetAxis(vertAxis) * vertSpeed));
 
-  void GameOver() {
-    //
-    gameOver = true;
-  }
+			float speed = body.velocity.magnitude;
+			if (speed > maxVelocity)
+			{
+				float fac = maxVelocity / speed;
+				body.velocity *= fac;
+			}
+		}
+	}
 
-  void TaskOnClick () {
-    SceneManager.LoadScene("Main Menu");
-  }
+	void OnCollisionEnter(Collision other) 
+	{
+		if (!gameOver && other.gameObject.layer != 9) {
+			Destroy(other.gameObject);
+			score++;
+			if (!multi)
+				scoreTxt.text = boidText + score;
+
+		}
+	}
+
+	void GameOver() 
+	{
+		//
+		gameOver = true;
+
+	}
+
+	void TaskOnClick () 
+	{
+		SceneManager.LoadScene("Main Menu");
+	}
 }

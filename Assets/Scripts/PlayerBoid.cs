@@ -18,6 +18,10 @@ public class PlayerBoid : MonoBehaviour
 	[System.NonSerialized]
 	public Rigidbody body;
 
+	public string horizAxis;
+	public string vertAxis;
+	public string attractButton;
+
 	// Use this for initialization
 	void Awake () 
 	{
@@ -26,17 +30,20 @@ public class PlayerBoid : MonoBehaviour
 		attractionEnabled = false;
 	}
 
-	void OnDelete ()
+	void OnDestroy ()
 	{
 		if (flock != null)
+		{
+			flock.NotifyPlayerDead();
 			flock.RemovePlayerBoid(this);
+		}
 	}
 	
 	void FixedUpdate () 
 	{
-		body.AddForce(new Vector3(Input.GetAxis("Horizontal") * horizForceMax, 0, Input.GetAxis("Vertical") * vertForceMax));
+		body.AddForce(new Vector3(Input.GetAxis(horizAxis) * horizForceMax, 0, Input.GetAxis(vertAxis) * vertForceMax));
 		body.rotation = Quaternion.LookRotation(body.velocity);
 
-		attractionEnabled = Input.GetAxis("Fire1") != 0;
+		attractionEnabled = Input.GetAxis(attractButton) != 0;
 	}
 }

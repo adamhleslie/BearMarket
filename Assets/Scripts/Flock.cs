@@ -178,6 +178,14 @@ public class Flock : MonoBehaviour
     boidPlayers.Remove(player);
   }
 
+  public void NotifyPlayerDead ()
+  {
+    foreach (PlayerPredator pred in predPlayers)
+    {
+      pred.playerKilled = true;
+    }
+  }
+
   void FixedUpdate ()
   {
     bool updatePlayersOnly = false;
