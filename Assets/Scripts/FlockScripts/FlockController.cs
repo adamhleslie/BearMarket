@@ -24,9 +24,6 @@ public class FlockController : MonoBehaviour
 	[SerializeField]
 	private Vector3 initialVelocityMax;
 
-	[SerializeField]
-	private bool treatPlayerBoidAsBoid;
-
 	// Boid Flocking Vars
 	[SerializeField]
 	private int updatesToWait;
@@ -89,12 +86,15 @@ public class FlockController : MonoBehaviour
 	[SerializeField]
 	private float wallAvoidanceStrength;
 
-	// Awareness of all boids, players, obstacles, and predators
-	private List<Boid> boidList = new List<Boid>();
+	[SerializeField]
+	private bool treatPlayerBoidAsBoid;
 
 	[SerializeField]
 	private FlockPlayerBoid[] initialBoidPlayers;
-	public static List<FlockPlayerBoid> boidPlayers = new List<FlockPlayerBoid>();
+
+	// Awareness of all boids, players, obstacles, and predators
+	private List<Boid> boidList = new List<Boid>();
+	private List<FlockPlayerBoid> boidPlayers = new List<FlockPlayerBoid>();
 
 	// public static List<PlayerPredator> predPlayers = new List<PlayerPredator>();
 
@@ -247,22 +247,15 @@ public class FlockController : MonoBehaviour
 			if (collisionAvoidanceEnabled)
 			{
 				RaycastHit hit;
-				if (Physics.Raycast(boid.body.position, boid.body.velocity, out hit, wallDetectDist, collisionLayer)) 
+				if (Physics.SphereCast(boid.body.position, 5f, boid.body.velocity, out hit, wallDetectDist, collisionLayer))
 				{
-					Vector3 reflectDir = Vector3.Reflect(boid.body.velocity.normalized * (hit.distance), hit.normal) + hit.point;
-					reflectDir -= boid.body.position;
+					Vector3 reflectDir = Vector3.Reflect(boid.body.velocity.normalized * hit.distance, hit.normal).normalized;
+					reflectDir += boid.body.velocity.normalized;
 					boid.AddForce(reflectDir.normalized * wallAvoidanceStrength);
-
-					// If too close, manually change the velocity
-					if (hit.distance < wallDetectDist / 5 && reflectDir != Vector3.zero) 
-					{
-						float scaleVec = reflectDir.magnitude / boid.body.velocity.magnitude;
-						boid.body.velocity = reflectDir / scaleVec;
-					}
 				}
 			}
 
-			// 2.3 Flock Behavior
+			// 2.3 Flock Behaviour
 			for (int curFlockMate = 0; curFlockMate < activeBoid; curFlockMate++)
 			{
 				Boid flockMate = boidList[curFlockMate];
