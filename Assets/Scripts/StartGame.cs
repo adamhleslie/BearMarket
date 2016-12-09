@@ -13,6 +13,6 @@ public class StartGame : MonoBehaviour {
 	}
 	
 	void TaskOnClick () {
-		SceneManager.LoadScene ("FlockingColiseum");
+		SceneManager.LoadScene ("Coliseum");
 	}
 }

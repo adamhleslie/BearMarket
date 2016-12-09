@@ -1,31 +1,40 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class PlayerBoid : MonoBehaviour 
+public class PlayerBoid : MonoBehaviour
 {
-	public Rigidbody body;
+	[SerializeField]
+	private float horizForceMax;
+
+	[SerializeField]
+	private float vertForceMax;
+
+	[System.NonSerialized]
 	public bool attractionEnabled;
 
-	[SerializeField]
-	private float horizSpeed;
+	[System.NonSerialized]
+	public Flock flock;
 
-	[SerializeField]
-	private float vertSpeed;
+	[System.NonSerialized]
+	public Rigidbody body;
 
 	// Use this for initialization
-	void Start () 
+	void Awake () 
 	{
 		body = GetComponent<Rigidbody>();
 
-		BoidController.boidPlayers.Add(this);
-		BoidController.boidList.Add(body);
-
 		attractionEnabled = false;
+	}
+
+	void OnDelete ()
+	{
+		if (flock != null)
+			flock.RemovePlayerBoid(this);
 	}
 	
 	void FixedUpdate () 
 	{
-		body.velocity = new Vector3(Input.GetAxis("Horizontal") * horizSpeed, 0, Input.GetAxis("Vertical") * vertSpeed);
+		body.AddForce(new Vector3(Input.GetAxis("Horizontal") * horizForceMax, 0, Input.GetAxis("Vertical") * vertForceMax));
 		body.rotation = Quaternion.LookRotation(body.velocity);
 
 		attractionEnabled = Input.GetAxis("Fire1") != 0;

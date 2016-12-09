@@ -14,7 +14,7 @@ public class Boid : MonoBehaviour
 	public Rigidbody body;
 
 	[System.NonSerialized]
-	public FlockController flock;
+	public Flock flock;
 
 	void Awake ()
 	{

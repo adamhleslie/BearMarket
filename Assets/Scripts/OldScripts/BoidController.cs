@@ -62,7 +62,7 @@ public class BoidController : MonoBehaviour
 
 	// Awareness of all boids, obstacles, and preds
 	public static List<Rigidbody> boidList = new List<Rigidbody>();
-	public static List<PlayerBoid> boidPlayers = new List<PlayerBoid>();
+	public static List<PlayerBoidController> boidPlayers = new List<PlayerBoidController>();
 	public static List<PlayerPredator> predPlayers = new List<PlayerPredator>();
 
 	// Initialization
@@ -119,7 +119,7 @@ public class BoidController : MonoBehaviour
 		}
 		if (playerAttractionEnabled)
 		{
-			foreach (PlayerBoid player in boidPlayers)
+			foreach (PlayerBoidController player in boidPlayers)
 			{
 				if (player.attractionEnabled)
 				{

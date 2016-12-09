@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 // DO NOT DYNAMICALLY ADD BOIDS TO THE FLOCK CONTROLLER
 
-public class FlockController : MonoBehaviour
+public class Flock : MonoBehaviour
 {
   // Boid Spawn Vars
   [SerializeField]
@@ -90,14 +90,14 @@ public class FlockController : MonoBehaviour
     private bool treatPlayerBoidAsBoid;
 
   [SerializeField]
-    private FlockPlayerBoid[] initialBoidPlayers;
+    private PlayerBoid[] initialBoidPlayers;
 
   [SerializeField]
     private PlayerPredator[] predPlayers;
 
   // Awareness of all boids, players, obstacles, and predators
   private List<Boid> boidList = new List<Boid>();
-  private List<FlockPlayerBoid> boidPlayers = new List<FlockPlayerBoid>();
+  private List<PlayerBoid> boidPlayers = new List<PlayerBoid>();
 
   // Spawn all boids
   void Start ()
@@ -132,7 +132,7 @@ public class FlockController : MonoBehaviour
 
     // Add players
     boidPlayers.Capacity = initialBoidPlayers.Length;
-    foreach (FlockPlayerBoid player in initialBoidPlayers)
+    foreach (PlayerBoid player in initialBoidPlayers)
     {
       AddPlayerBoid(player);
     }
@@ -159,7 +159,7 @@ public class FlockController : MonoBehaviour
     boidList.Remove(boid);
   }
 
-  public void AddPlayerBoid (FlockPlayerBoid player)
+  public void AddPlayerBoid (PlayerBoid player)
   {
     // Add player boids last
     if (treatPlayerBoidAsBoid)
@@ -172,7 +172,7 @@ public class FlockController : MonoBehaviour
     boidPlayers.Add(player);
   }
 
-  public void RemovePlayerBoid (FlockPlayerBoid player)
+  public void RemovePlayerBoid (PlayerBoid player)
   {
     player.flock = null;
     boidPlayers.Remove(player);
@@ -233,7 +233,7 @@ public class FlockController : MonoBehaviour
 
       if (playerAttractionEnabled)
       {
-        foreach (FlockPlayerBoid player in boidPlayers)
+        foreach (PlayerBoid player in boidPlayers)
         {
           if (player.attractionEnabled)
           {

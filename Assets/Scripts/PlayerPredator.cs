@@ -16,12 +16,17 @@ public class PlayerPredator : MonoBehaviour {
   [SerializeField]
     private float timeLeft;
 
+  public float maxVelocity;
+
   private int score = 0;
   public Text time;
   public Text scoreTxt;
   public Text endGameText;
   public Button reset;
   private bool gameOver = false;
+
+  public string timeText;
+  public string boidText;
 
   // Use this for initialization
   void Start ()
@@ -35,19 +40,24 @@ public class PlayerPredator : MonoBehaviour {
 
     reset.onClick.AddListener(TaskOnClick);
 
-    time.text = "Time: " + timeLeft;
-    scoreTxt.text = "Boids Eaten: " + score;
+    time.text = timeText + (timeLeft  - (timeLeft % 1));
+    scoreTxt.text = boidText + score;
   }
 
   void Update () {
+    body.rotation = Quaternion.LookRotation(body.velocity);
     if (!gameOver) {
       timeLeft -= Time.deltaTime;
-      time.text = "Time: " + timeLeft;
+      time.text = timeText + (timeLeft  - (timeLeft % 1));
       if (timeLeft < 0) {
-        time.text = "Time: 0";
+        time.text = timeText + "0";
         reset.gameObject.SetActive(true);
         endGameText.gameObject.SetActive(true);
         GameOver();
+      }
+      else if (timeLeft <= 10)
+      {
+        time.text = timeText + (timeLeft  - (timeLeft % .1));
       }
     }
   }
@@ -55,17 +65,23 @@ public class PlayerPredator : MonoBehaviour {
   void FixedUpdate ()
   {
     if (!gameOver) {
-      body.velocity = new Vector3(Input.GetAxis("Horizontal") * horizSpeed,
-          0, Input.GetAxis("Vertical") * vertSpeed);
-      body.rotation = Quaternion.LookRotation(body.velocity);
+      body.AddForce(new Vector3(Input.GetAxis("Horizontal") * horizSpeed,
+          0, Input.GetAxis("Vertical") * vertSpeed));
+
+      float speed = body.velocity.magnitude;
+      if (speed > maxVelocity)
+      {
+        float fac = maxVelocity / speed;
+        body.velocity *= fac;
+      }
     }
   }
 
-  void OnTriggerEnter(Collider other) {
+  void OnCollisionEnter(Collision other) {
     if (!gameOver && other.gameObject.layer != 9) {
       Destroy(other.gameObject);
       score++;
-      scoreTxt.text = "Boids Eaten: " + score;
+      scoreTxt.text = boidText + score;
     }
   }
 
