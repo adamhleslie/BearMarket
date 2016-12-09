@@ -1,23 +1,35 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class FlockPlayerBoid : MonoBehaviour 
+public class FlockPlayerBoid : MonoBehaviour
 {
-	public Rigidbody body;
-	public bool attractionEnabled;
-
 	[SerializeField]
 	private float horizForceMax;
 
 	[SerializeField]
 	private float vertForceMax;
 
+	[System.NonSerialized]
+	public bool attractionEnabled;
+
+	[System.NonSerialized]
+	public FlockController flock;
+
+	[System.NonSerialized]
+	public Rigidbody body;
+
 	// Use this for initialization
-	void Start () 
+	void Awake () 
 	{
 		body = GetComponent<Rigidbody>();
 
 		attractionEnabled = false;
+	}
+
+	void OnDelete ()
+	{
+		if (flock != null)
+			flock.RemovePlayerBoid(this);
 	}
 	
 	void FixedUpdate () 
