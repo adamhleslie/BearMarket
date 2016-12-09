@@ -27,6 +27,12 @@ public class Boid : MonoBehaviour
 			flock.RemoveBoid(this);
 	}
 
+        void OnDestroy()
+        {
+          if (flock != null)
+            flock.RemoveBoid(this);
+        }
+
 	public void ResetState ()
 	{
 		forces.Clear();
